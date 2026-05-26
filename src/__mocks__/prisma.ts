@@ -1,0 +1,121 @@
+// Mock Prisma Client — remplace ../prisma dans tous les tests
+const mockPrisma = {
+  utilisateur: {
+    findFirst: jest.fn(),
+    findMany:  jest.fn(),
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    updateMany: jest.fn(),
+    count:     jest.fn(),
+  },
+  entreprise: {
+    create:    jest.fn(),
+    findMany:  jest.fn(),
+  },
+  chantier: {
+    findMany:  jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    updateMany: jest.fn(),
+  },
+  budget: {
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    updateMany: jest.fn(),
+  },
+  corpsEtat: {
+    findMany:  jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    updateMany: jest.fn(),
+    delete:    jest.fn(),
+    aggregate: jest.fn(),
+  },
+  planning: {
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    upsert:    jest.fn(),
+  },
+  jalon: {
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+  },
+  intervenant: {
+    findMany:  jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    delete:    jest.fn(),
+  },
+  contrat: {
+    findMany:  jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    count:     jest.fn(),
+  },
+  modification: {
+    findMany:  jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    count:     jest.fn(),
+    aggregate: jest.fn(),
+  },
+  client: {
+    findMany:  jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+  },
+  situation: {
+    findMany:  jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    updateMany: jest.fn(),
+    count:     jest.fn(),
+    aggregate: jest.fn(),
+  },
+  paiement: {
+    create:    jest.fn(),
+    findMany:  jest.fn(),
+    aggregate: jest.fn(),
+  },
+  factureST: {
+    findMany:  jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create:    jest.fn(),
+    update:    jest.fn(),
+    count:     jest.fn(),
+  },
+  rapportTerrain: {
+    findMany:  jest.fn(),
+    create:    jest.fn(),
+  },
+  pointage: {
+    findMany:  jest.fn(),
+    create:    jest.fn(),
+  },
+  document: {
+    findMany:  jest.fn(),
+    create:    jest.fn(),
+    delete:    jest.fn(),
+  },
+  cloture: {
+    findUnique: jest.fn(),
+    upsert:    jest.fn(),
+    update:    jest.fn(),
+  },
+};
+
+export default mockPrisma;

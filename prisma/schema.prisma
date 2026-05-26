@@ -1,0 +1,498 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// SYSTÈME
+// ─────────────────────────────────────────
+
+model Entreprise {
+  tenant_id          String   @id @default(uuid())
+  nom_entreprise     String
+  logo_url           String?
+  plan_abonnement    String   @default("starter")
+  nb_utilisateurs_max Int     @default(10)
+  statut             String   @default("actif")
+  date_inscription   DateTime @default(now())
+
+  utilisateurs  Utilisateur[]
+  clients       Client[]
+  contrats      Contrat[]
+  chantiers     Chantier[]
+
+  @@map("entreprises")
+}
+
+model Utilisateur {
+  id               Int      @id @default(autoincrement())
+  tenant_id        String
+  nom              String
+  prenom           String
+  email            String
+  mot_de_passe_hash String
+  role             Role     @default(conducteur)
+  actif            Boolean  @default(true)
+  created_at       DateTime @default(now())
+
+  entreprise Entreprise @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+
+  @@unique([email, tenant_id])
+  @@map("utilisateurs")
+}
+
+enum Role {
+  admin
+  conducteur
+  chef_chantier
+  comptable
+}
+
+// ─────────────────────────────────────────
+// PRINCIPALES
+// ─────────────────────────────────────────
+
+model Client {
+  id             Int      @id @default(autoincrement())
+  tenant_id      String
+  nom            String?
+  prenom         String?
+  raison_sociale String?
+  type_client    TypeClient @default(particulier)
+  telephone      String
+  email          String
+  adresse        String
+  created_at     DateTime @default(now())
+
+  entreprise Entreprise @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  contrats   Contrat[]
+
+  @@map("clients")
+}
+
+enum TypeClient {
+  particulier
+  societe
+}
+
+model Contrat {
+  id                    Int      @id @default(autoincrement())
+  tenant_id             String
+  id_client             Int
+  numero_marche         String
+  type_construction     String
+  montant_marche        Float
+  montant_marche_revise Float    @default(0) // recalculé à chaque avenant signé
+  date_signature        DateTime
+  date_demarrage_prevue DateTime
+  date_livraison_prevue DateTime
+  penalites_retard      Float    @default(0)
+  statut                StatutContrat @default(en_cours)
+  created_at            DateTime @default(now())
+
+  entreprise    Entreprise     @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  client        Client         @relation(fields: [id_client], references: [id])
+  modifications Modification[]
+  chantier      Chantier?
+
+  @@map("contrats")
+}
+
+enum StatutContrat {
+  en_cours
+  termine
+  resilie
+  suspendu
+}
+
+model Modification {
+  id                   Int      @id @default(autoincrement())
+  tenant_id            String
+  id_contrat           Int
+  numero_modification  Int
+  motif                String
+  montant_supplementaire Float  @default(0)
+  delai_supplementaire Int      @default(0)
+  statut               StatutModification @default(en_attente)
+  created_at           DateTime @default(now())
+
+  contrat Contrat @relation(fields: [id_contrat], references: [id], onDelete: Cascade)
+
+  @@map("modifications")
+}
+
+enum StatutModification {
+  signe
+  en_attente
+  refuse
+}
+
+// ─────────────────────────────────────────
+// CHANTIER (entité centrale)
+// ─────────────────────────────────────────
+
+model Chantier {
+  id                    Int      @id @default(autoincrement())
+  tenant_id             String
+  id_contrat            Int      @unique
+  nom_chantier          String
+  localisation          String
+  description           String?
+  date_demarrage_reelle DateTime?
+  date_livraison_reelle DateTime?
+  date_livraison_prevue DateTime
+  statut                StatutChantier @default(en_cours)
+  avancement_global     Float    @default(0)
+  chef_chantier         String
+  created_at            DateTime @default(now())
+
+  entreprise    Entreprise      @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  contrat       Contrat         @relation(fields: [id_contrat], references: [id])
+  budget        Budget?
+  planning      Planning?
+  corps_etat    CorpsEtat[]
+  intervenants  Intervenant[]
+  ressources    Ressource[]
+  rapports      RapportTerrain[]
+  pointages     Pointage[]
+  situations    Situation[]
+  documents     Document[]
+  factures_st   FactureST[]
+  cloture       Cloture?
+
+  @@map("chantiers")
+}
+
+enum StatutChantier {
+  en_cours
+  termine
+  suspendu
+  cloture
+}
+
+// ─────────────────────────────────────────
+// GESTION
+// ─────────────────────────────────────────
+
+model Budget {
+  id                  Int   @id @default(autoincrement())
+  tenant_id           String
+  id_chantier         Int   @unique
+  debourse_sec_estime Float
+  frais_generaux      Float @default(0)
+  marge_prevue        Float @default(0)
+  provision_aleas     Float @default(0)
+  montant_total_S0    Float @default(0)
+  cout_reel_a_date    Float @default(0)
+  reste_a_depenser    Float @default(0)
+  ecart_budget        Float @default(0)
+  created_at          DateTime @default(now())
+
+  chantier Chantier @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+
+  @@map("budgets")
+}
+
+model Planning {
+  id               Int      @id @default(autoincrement())
+  tenant_id        String
+  id_chantier      Int      @unique
+  date_creation    DateTime @default(now())
+  date_debut_prevue DateTime
+  date_fin_prevue  DateTime
+  version          Int      @default(1)
+  statut           String   @default("actif")
+
+  chantier Chantier @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+  jalons   Jalon[]
+
+  @@map("plannings")
+}
+
+model Jalon {
+  id          Int      @id @default(autoincrement())
+  tenant_id   String
+  id_planning Int
+  nom_jalon   String
+  date_prevue DateTime
+  date_reelle DateTime?
+  statut      StatutJalon @default(en_attente)
+  ecart_jours Int         @default(0)
+
+  planning Planning @relation(fields: [id_planning], references: [id], onDelete: Cascade)
+
+  @@map("jalons")
+}
+
+enum StatutJalon {
+  atteint
+  manque
+  en_attente
+}
+
+model CorpsEtat {
+  id                Int      @id @default(autoincrement())
+  tenant_id         String
+  id_chantier       Int
+  nom               String
+  date_debut_prevue DateTime?
+  date_fin_prevue   DateTime?
+  avancement        Float    @default(0)
+  part_chantier     Float    @default(0)
+  ordre_execution   Int      @default(1)
+  budget_alloue     Float    @default(0)
+  cout_reel         Float    @default(0)
+  statut            String   @default("en_cours")
+
+  chantier     Chantier      @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+  intervenants Intervenant[]
+
+  @@map("corps_etat")
+}
+
+// ─────────────────────────────────────────
+// OPÉRATIONNELLES
+// ─────────────────────────────────────────
+
+model Intervenant {
+  id                      Int      @id @default(autoincrement())
+  tenant_id               String
+  id_chantier             Int
+  id_corps_etat           Int
+  type_intervenant        String   @default("entreprise")
+  nom                     String
+  raison_sociale          String?
+  telephone               String?
+  email                   String?
+  montant_contrat         Float    @default(0)
+  assurance               Boolean  @default(false)
+  numero_agrement         String?
+  date_expiration_agrement DateTime?
+  actif                   Boolean  @default(true)
+
+  chantier  Chantier  @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+  corpsEtat CorpsEtat @relation(fields: [id_corps_etat], references: [id])
+
+  @@map("intervenants")
+}
+
+model Ressource {
+  id               Int      @id @default(autoincrement())
+  tenant_id        String
+  id_chantier      Int
+  type             TypeRessource
+  nom              String
+  quantite_prevue  Float    @default(0)
+  quantite_reelle  Float    @default(0)
+  unite            String
+  cout_unitaire    Float    @default(0)
+  date_affectation DateTime?
+
+  chantier Chantier @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+
+  @@map("ressources")
+}
+
+enum TypeRessource {
+  humaine
+  materiel
+  materiau
+}
+
+// ─────────────────────────────────────────
+// SUIVI
+// ─────────────────────────────────────────
+
+model RapportTerrain {
+  id                Int      @id @default(autoincrement())
+  tenant_id         String
+  id_chantier       Int
+  date_rapport      DateTime @default(now())
+  redacteur         String
+  effectif_present  Int      @default(0)
+  meteo             Meteo    @default(ensoleille)
+  observations      String?
+  incidents         String?
+  a_incident        Boolean  @default(false)
+  created_at        DateTime @default(now())
+
+  chantier      Chantier           @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+  corps_travaux CorpsEtatRapport[]
+
+  @@map("rapports_terrain")
+}
+
+enum Meteo {
+  ensoleille
+  nuageux
+  pluvieux
+  orageux
+  venteux
+}
+
+model CorpsEtatRapport {
+  id               Int @id @default(autoincrement())
+  id_rapport       Int
+  id_corps_etat    Int
+  nom              String
+  avancement_avant Float
+  avancement_apres Float
+
+  rapport RapportTerrain @relation(fields: [id_rapport], references: [id], onDelete: Cascade)
+
+  @@map("corps_etat_rapports")
+}
+
+model Pointage {
+  id              Int      @id @default(autoincrement())
+  tenant_id       String
+  id_chantier     Int
+  date            DateTime
+  effectif_prevu  Int      @default(0)
+  total_presents  Int      @default(0)
+  total_heures    Float    @default(0)
+  created_at      DateTime @default(now())
+
+  chantier      Chantier           @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+  intervenants  PointageIntervenant[]
+
+  @@map("pointages")
+}
+
+model PointageIntervenant {
+  id              Int     @id @default(autoincrement())
+  id_pointage     Int
+  id_intervenant  Int
+  nom_complet     String
+  corps_etat      String
+  present         Boolean @default(true)
+  heures          Float   @default(8)
+
+  pointage Pointage @relation(fields: [id_pointage], references: [id], onDelete: Cascade)
+
+  @@map("pointage_intervenants")
+}
+
+model Situation {
+  id                 Int      @id @default(autoincrement())
+  tenant_id          String
+  id_chantier        Int
+  numero_situation   Int
+  date_emission      DateTime @default(now())
+  date_echeance      DateTime? // date_emission + délai de paiement (30j par défaut)
+  montant_ht         Float
+  taux_tva           Float    @default(18)
+  montant_ttc        Float
+  retenue_garantie   Float    @default(0) // 5% du TTC, libérable à la réception
+  montant_net        Float    @default(0) // montant_ttc - retenue_garantie
+  montant_encaisse   Float    @default(0)
+  reste_a_facturer   Float    @default(0)
+  avancement_facture Float    @default(0)
+  statut             StatutSituation @default(en_attente)
+  created_at         DateTime @default(now())
+
+  chantier    Chantier     @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+  paiements   Paiement[]
+
+  @@map("situations")
+}
+
+enum StatutSituation {
+  payee
+  en_attente
+  en_retard
+}
+
+model Paiement {
+  id              Int      @id @default(autoincrement())
+  tenant_id       String
+  id_situation    Int
+  montant         Float
+  date_paiement   DateTime
+  reference       String?
+  mode_paiement   String   @default("virement")
+  created_at      DateTime @default(now())
+
+  situation Situation @relation(fields: [id_situation], references: [id], onDelete: Cascade)
+
+  @@map("paiements")
+}
+
+model Document {
+  id          Int      @id @default(autoincrement())
+  tenant_id   String
+  id_chantier Int
+  nom_fichier String
+  extension   String
+  categorie   CategorieDocument @default(divers)
+  taille_ko   Float    @default(0)
+  url_fichier String?
+  ajoute_par  String
+  date_upload DateTime @default(now())
+
+  chantier Chantier @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+enum CategorieDocument {
+  contrat
+  plan
+  pv
+  facture
+  photo
+  divers
+}
+
+model FactureST {
+  id             Int      @id @default(autoincrement())
+  tenant_id      String
+  id_chantier    Int
+  numero         String
+  intervenant    String
+  corps_etat     String?
+  date_facture   DateTime
+  date_reception DateTime @default(now())
+  montant_ht     Float
+  taux_tva       Float    @default(18)
+  montant_tva    Float
+  montant_ttc    Float
+  statut         StatutFactureST @default(en_attente)
+  created_at     DateTime @default(now())
+
+  chantier Chantier @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+
+  @@map("factures_st")
+}
+
+enum StatutFactureST {
+  en_attente
+  validee
+  contestee
+}
+
+model Cloture {
+  id                       Int      @id @default(autoincrement())
+  tenant_id                String
+  id_chantier              Int      @unique
+  statut_bilan             StatutCloture @default(en_cours)
+  date_validation_comptable DateTime?
+  date_cloture_admin        DateTime?
+  marge_reelle              Float?
+  observations              String?
+  created_at               DateTime @default(now())
+
+  chantier Chantier @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
+
+  @@map("clotures")
+}
+
+enum StatutCloture {
+  en_cours
+  bilan_valide
+  cloture
+}
