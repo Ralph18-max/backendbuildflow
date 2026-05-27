@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: buildflow-api
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npx prisma migrate deploy && node dist/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        value: https://buildflow.vercel.app
+      - key: DATABASE_URL
+        fromDatabase:
+          name: buildflow-db
+          property: connectionString
+
+databases:
+  - name: buildflow-db
+    databaseName: buildflow
+    user: buildflow_user
+    plan: free
