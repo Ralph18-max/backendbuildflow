@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -29,6 +30,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/utilisateurs',  utilisateurRoutes);
