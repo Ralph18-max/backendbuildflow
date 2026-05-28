@@ -2,4 +2,4 @@
 cmds = ["npm install --ignore-scripts"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npx prisma generate", "npm run build"]
