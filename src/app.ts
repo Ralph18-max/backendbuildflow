@@ -18,6 +18,8 @@ const app = express();
 
 const ALLOWED_ORIGINS = new Set([
   process.env['FRONTEND_URL'],
+  'https://buildflow-prod.vercel.app',
+  'https://buildflow.vercel.app',
 ].filter(Boolean));
 
 app.use(cors({
@@ -25,6 +27,7 @@ app.use(cors({
     if (!origin) { callback(null, true); return; }
     if (ALLOWED_ORIGINS.has(origin)) { callback(null, true); return; }
     if (/^http:\/\/localhost(:\d+)?$/.test(origin)) { callback(null, true); return; }
+    if (/\.vercel\.app$/.test(origin)) { callback(null, true); return; }
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
