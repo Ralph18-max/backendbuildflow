@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma';
 import { asyncHandler } from '../utils/asyncHandler';
+import { authMiddleware, AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -126,6 +127,33 @@ router.post('/register', asyncHandler(async (req: Request, res: Response): Promi
       entreprise:       entreprise.nom_entreprise,
     },
   });
+}));
+
+// PUT /api/auth/change-password
+router.put('/change-password', authMiddleware, asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const { ancien_mot_de_passe, nouveau_mot_de_passe } = req.body;
+
+  if (!ancien_mot_de_passe || !nouveau_mot_de_passe) {
+    res.status(400).json({ message: 'Champs requis manquants' });
+    return;
+  }
+  if (nouveau_mot_de_passe.length < 8) {
+    res.status(400).json({ message: 'Le nouveau mot de passe doit contenir au moins 8 caractères' });
+    return;
+  }
+
+  const utilisateur = await prisma.utilisateur.findUnique({ where: { id: req.user!.id } });
+  if (!utilisateur || !await bcrypt.compare(ancien_mot_de_passe, utilisateur.mot_de_passe_hash)) {
+    res.status(401).json({ message: 'Mot de passe actuel incorrect' });
+    return;
+  }
+
+  await prisma.utilisateur.update({
+    where: { id: req.user!.id },
+    data: { mot_de_passe_hash: await bcrypt.hash(nouveau_mot_de_passe, 10) },
+  });
+
+  res.json({ message: 'Mot de passe modifié avec succès' });
 }));
 
 export default router;
