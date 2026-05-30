@@ -1,17 +1,6 @@
-import nodemailer from 'nodemailer';
-import dns from 'dns';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host:   process.env['EMAIL_HOST']    || 'smtp.gmail.com',
-  port:   Number(process.env['EMAIL_PORT'] || 587),
-  secure: process.env['EMAIL_SECURE']  === 'true',
-  auth: {
-    user: process.env['EMAIL_USER'],
-    pass: process.env['EMAIL_PASS'],
-  },
-  dnsLookup: (hostname: string, _opts: unknown, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) =>
-    dns.lookup(hostname, { family: 4 }, callback),
-} as Parameters<typeof nodemailer.createTransport>[0]);
+const resend = new Resend(process.env['RESEND_API_KEY']);
 
 export async function envoyerCredentiels(params: {
   prenom:    string;
@@ -21,7 +10,7 @@ export async function envoyerCredentiels(params: {
   societe:   string;
   password:  string;
 }): Promise<void> {
-  const { prenom, nom, email, role, societe, password } = params;
+  const { email, role, societe, password } = params;
 
   const roleLabel: Record<string, string> = {
     admin:          'Administrateur',
@@ -121,8 +110,8 @@ export async function envoyerCredentiels(params: {
 </body>
 </html>`;
 
-  await transporter.sendMail({
-    from:    process.env['EMAIL_FROM'] || `"BuildFlow" <${process.env['EMAIL_USER']}>`,
+  await resend.emails.send({
+    from:    process.env['EMAIL_FROM'] || 'BuildFlow <onboarding@resend.dev>',
     to:      email,
     subject: `[BuildFlow] Vos identifiants de connexion — ${societe}`,
     html,
