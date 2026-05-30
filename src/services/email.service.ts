@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
+const transportOptions = {
   host:   process.env['EMAIL_HOST']    || 'smtp.gmail.com',
   port:   Number(process.env['EMAIL_PORT'] || 587),
   secure: process.env['EMAIL_SECURE']  === 'true',
@@ -9,7 +9,9 @@ const transporter = nodemailer.createTransport({
     pass: process.env['EMAIL_PASS'],
   },
   family: 4,
-});
+} as Parameters<typeof nodemailer.createTransport>[0];
+
+const transporter = nodemailer.createTransport(transportOptions);
 
 export async function envoyerCredentiels(params: {
   prenom:    string;
