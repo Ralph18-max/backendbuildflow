@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
+import dns from 'dns';
 
-const transportOptions = {
+const transporter = nodemailer.createTransport({
   host:   process.env['EMAIL_HOST']    || 'smtp.gmail.com',
   port:   Number(process.env['EMAIL_PORT'] || 587),
   secure: process.env['EMAIL_SECURE']  === 'true',
@@ -8,10 +9,9 @@ const transportOptions = {
     user: process.env['EMAIL_USER'],
     pass: process.env['EMAIL_PASS'],
   },
-  family: 4,
-} as Parameters<typeof nodemailer.createTransport>[0];
-
-const transporter = nodemailer.createTransport(transportOptions);
+  dnsLookup: (hostname: string, _opts: unknown, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) =>
+    dns.lookup(hostname, { family: 4 }, callback),
+} as Parameters<typeof nodemailer.createTransport>[0]);
 
 export async function envoyerCredentiels(params: {
   prenom:    string;
