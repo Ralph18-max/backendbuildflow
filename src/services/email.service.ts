@@ -1,6 +1,4 @@
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env['RESEND_API_KEY']);
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 export async function envoyerCredentiels(params: {
   prenom:    string;
@@ -28,7 +26,6 @@ export async function envoyerCredentiels(params: {
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-        <!-- En-tête -->
         <tr>
           <td style="background:#1A1A18;padding:32px 40px;">
             <h1 style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-1px;">
@@ -40,7 +37,6 @@ export async function envoyerCredentiels(params: {
           </td>
         </tr>
 
-        <!-- Corps -->
         <tr>
           <td style="padding:36px 40px;">
             <p style="margin:0 0 8px;font-size:15px;color:#6B6B67;">Bonjour,</p>
@@ -53,7 +49,6 @@ export async function envoyerCredentiels(params: {
               Voici vos identifiants de connexion :
             </p>
 
-            <!-- Bloc identifiants -->
             <table width="100%" cellpadding="0" cellspacing="0"
               style="background:#F5F1EA;border-radius:12px;margin-bottom:28px;">
               <tr>
@@ -80,7 +75,6 @@ export async function envoyerCredentiels(params: {
               ⚠️ Pour votre sécurité, changez ce mot de passe dès votre première connexion.
             </p>
 
-            <!-- Bouton -->
             <table cellpadding="0" cellspacing="0">
               <tr>
                 <td style="background:#E8520A;border-radius:8px;">
@@ -94,7 +88,6 @@ export async function envoyerCredentiels(params: {
           </td>
         </tr>
 
-        <!-- Pied de page -->
         <tr>
           <td style="padding:20px 40px;border-top:1px solid #E8E4DB;">
             <p style="margin:0;font-size:12px;color:#B0ADA6;line-height:1.5;">
@@ -110,10 +103,26 @@ export async function envoyerCredentiels(params: {
 </body>
 </html>`;
 
-  await resend.emails.send({
-    from:    process.env['EMAIL_FROM'] || 'BuildFlow <onboarding@resend.dev>',
-    to:      email,
-    subject: `[BuildFlow] Vos identifiants de connexion — ${societe}`,
-    html,
+  const senderEmail = process.env['EMAIL_FROM_ADDRESS'] || 'kouamejeantrinite@gmail.com';
+  const senderName  = process.env['EMAIL_FROM_NAME']    || 'BuildFlow';
+
+  const res = await fetch(BREVO_API_URL, {
+    method: 'POST',
+    headers: {
+      'accept':       'application/json',
+      'api-key':      process.env['BREVO_API_KEY'] ?? '',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender:      { name: senderName, email: senderEmail },
+      to:          [{ email }],
+      subject:     `[BuildFlow] Vos identifiants de connexion — ${societe}`,
+      htmlContent: html,
+    }),
   });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`Brevo error ${res.status}: ${detail}`);
+  }
 }
