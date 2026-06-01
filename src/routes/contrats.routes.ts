@@ -71,6 +71,31 @@ router.post('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res
   res.status(201).json(contrat);
 }));
 
+// PATCH /api/contrats/:id — modifier les infos d'un contrat (admin seulement)
+router.patch('/:id', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = Number(req.params['id']);
+  const contrat = await prisma.contrat.findFirst({
+    where: { id, tenant_id: req.user!.tenant_id },
+  });
+  if (!contrat) { res.status(404).json({ message: 'Contrat introuvable' }); return; }
+
+  const { type_construction, date_signature, date_demarrage_prevue, date_livraison_prevue, penalites_retard, statut } = req.body;
+
+  const updated = await prisma.contrat.update({
+    where: { id },
+    data: {
+      ...(type_construction !== undefined && { type_construction }),
+      ...(date_signature !== undefined && { date_signature: new Date(date_signature) }),
+      ...(date_demarrage_prevue !== undefined && { date_demarrage_prevue: new Date(date_demarrage_prevue) }),
+      ...(date_livraison_prevue !== undefined && { date_livraison_prevue: new Date(date_livraison_prevue) }),
+      ...(penalites_retard !== undefined && { penalites_retard: Number(penalites_retard) }),
+      ...(statut !== undefined && { statut }),
+    },
+    include: { client: true, modifications: true, chantier: true },
+  });
+  res.json(updated);
+}));
+
 // POST /api/contrats/:id/avenants
 router.post('/:id/avenants', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id_contrat = Number(req.params['id']);
