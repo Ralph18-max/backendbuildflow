@@ -10,10 +10,10 @@ router.use(authMiddleware);
 // GET /api/chantiers
 router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const user = req.user!;
-  const where: Record<string, unknown> = { tenant_id: user.tenant_id };
+  const where: Prisma.ChantierWhereInput = { tenant_id: user.tenant_id };
 
   if (user.role === 'chef_chantier') {
-    where['chef_chantier'] = { contains: `${user.prenom} ${user.nom}`, mode: 'insensitive' };
+    where.chef_chantier = { contains: `${user.prenom} ${user.nom}`, mode: 'insensitive' };
   }
 
   const chantiers = await prisma.chantier.findMany({
