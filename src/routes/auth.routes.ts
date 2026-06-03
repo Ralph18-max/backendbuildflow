@@ -32,6 +32,8 @@ router.post('/login', asyncHandler(async (req: Request, res: Response): Promise<
       email:     utilisateur.email,
       role:      utilisateur.role,
       tenant_id: utilisateur.tenant_id,
+      nom:       utilisateur.nom,
+      prenom:    utilisateur.prenom,
     },
     process.env['JWT_SECRET']!,
     { expiresIn: '7d' }
@@ -110,6 +112,8 @@ router.post('/register', asyncHandler(async (req: Request, res: Response): Promi
       email:     utilisateur.email,
       role:      utilisateur.role,
       tenant_id: utilisateur.tenant_id,
+      nom:       utilisateur.nom,
+      prenom:    utilisateur.prenom,
     },
     process.env['JWT_SECRET']!,
     { expiresIn: '7d' }
