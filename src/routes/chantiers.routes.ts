@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../prisma';
 import { authMiddleware, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -55,15 +56,23 @@ router.post('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res
   const { id_contrat, nom_chantier, localisation, description,
           date_livraison_prevue, chef_chantier } = req.body;
 
-  const chantier = await prisma.chantier.create({
-    data: {
-      tenant_id: req.user!.tenant_id,
-      id_contrat: Number(id_contrat),
-      nom_chantier, localisation, description, chef_chantier,
-      date_livraison_prevue: new Date(date_livraison_prevue),
-    },
-  });
-  res.status(201).json(chantier);
+  try {
+    const chantier = await prisma.chantier.create({
+      data: {
+        tenant_id: req.user!.tenant_id,
+        id_contrat: Number(id_contrat),
+        nom_chantier, localisation, description, chef_chantier,
+        date_livraison_prevue: new Date(date_livraison_prevue),
+      },
+    });
+    res.status(201).json(chantier);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      res.status(409).json({ message: 'Ce contrat a déjà un chantier associé.' });
+      return;
+    }
+    throw e;
+  }
 }));
 
 // PATCH /api/chantiers/:id/avancement — recalcul automatique
