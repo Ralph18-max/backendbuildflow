@@ -90,4 +90,20 @@ router.put('/:id', requireRole('admin'), asyncHandler(async (req: AuthRequest, r
   res.json(updated);
 }));
 
+// DELETE /api/utilisateurs/:id — supprimer (admin only, ne peut pas se supprimer lui-même)
+router.delete('/:id', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = Number(req.params['id']);
+  if (id === req.user!.id) {
+    res.status(400).json({ message: 'Vous ne pouvez pas supprimer votre propre compte.' });
+    return;
+  }
+  const utilisateur = await prisma.utilisateur.findFirst({
+    where: { id, tenant_id: req.user!.tenant_id },
+  });
+  if (!utilisateur) { res.status(404).json({ message: 'Utilisateur introuvable' }); return; }
+
+  await prisma.utilisateur.delete({ where: { id } });
+  res.status(204).send();
+}));
+
 export default router;
