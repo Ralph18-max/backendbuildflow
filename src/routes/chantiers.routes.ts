@@ -185,6 +185,25 @@ router.post('/:id/corps-etat', requireRole('admin', 'conducteur'), asyncHandler(
   const id_chantier = Number(req.params['id']);
   const { nom, part_chantier, ordre_execution, budget_alloue, date_debut_prevue, date_fin_prevue } = req.body;
 
+  const chantier = await prisma.chantier.findFirst({
+    where: { id: id_chantier, tenant_id: req.user!.tenant_id },
+    select: { date_demarrage_reelle: true, date_livraison_prevue: true },
+  });
+  if (!chantier) { res.status(404).json({ message: 'Chantier introuvable' }); return; }
+
+  if (date_debut_prevue && chantier.date_demarrage_reelle) {
+    if (new Date(date_debut_prevue) < chantier.date_demarrage_reelle) {
+      res.status(400).json({ message: 'La date de début ne peut pas être avant le démarrage du chantier.' });
+      return;
+    }
+  }
+  if (date_fin_prevue && chantier.date_livraison_prevue) {
+    if (new Date(date_fin_prevue) > chantier.date_livraison_prevue) {
+      res.status(400).json({ message: 'La date de fin ne peut pas dépasser la livraison prévue du chantier.' });
+      return;
+    }
+  }
+
   const existants = await prisma.corpsEtat.findMany({ where: { id_chantier } });
   const somme = existants.reduce((s, c) => s + c.part_chantier, 0);
   if (somme + Number(part_chantier) > 100) {
