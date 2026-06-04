@@ -61,7 +61,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
 // POST /api/chantiers
 router.post('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { id_contrat, nom_chantier, localisation, description,
-          date_livraison_prevue, chef_chantier } = req.body;
+          date_livraison_prevue, date_demarrage_reelle, chef_chantier } = req.body;
 
   try {
     const chantier = await prisma.chantier.create({
@@ -70,6 +70,7 @@ router.post('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res
         id_contrat: Number(id_contrat),
         nom_chantier, localisation, description, chef_chantier,
         date_livraison_prevue: new Date(date_livraison_prevue),
+        ...(date_demarrage_reelle ? { date_demarrage_reelle: new Date(date_demarrage_reelle) } : {}),
       },
     });
     res.status(201).json(chantier);
