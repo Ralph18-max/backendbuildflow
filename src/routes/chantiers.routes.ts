@@ -258,7 +258,7 @@ router.patch('/:id/corps-etat/:ceId/avancement', requireRole('admin', 'conducteu
 }));
 
 // DELETE /api/chantiers/:id/corps-etat/:ceId
-router.delete('/:id/corps-etat/:ceId', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id/corps-etat/:ceId', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const deleted = await prisma.corpsEtat.deleteMany({
     where: { id: Number(req.params['ceId']), id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
   });
