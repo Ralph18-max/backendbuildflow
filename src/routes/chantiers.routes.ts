@@ -100,14 +100,16 @@ router.patch('/:id/avancement', requireRole('admin', 'conducteur'), asyncHandler
 
 // PATCH /api/chantiers/:id — modification des infos générales
 router.patch('/:id', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const { nom_chantier, localisation, description, chef_chantier } = req.body;
+  const { nom_chantier, localisation, description, chef_chantier, date_demarrage_reelle, date_livraison_prevue } = req.body;
   const updated = await prisma.chantier.updateMany({
     where: { id: Number(req.params['id']), tenant_id: req.user!.tenant_id },
     data: {
-      ...(nom_chantier   && { nom_chantier }),
-      ...(localisation   && { localisation }),
-      ...(description    !== undefined && { description }),
-      ...(chef_chantier  && { chef_chantier }),
+      ...(nom_chantier          && { nom_chantier }),
+      ...(localisation          && { localisation }),
+      ...(description           !== undefined && { description }),
+      ...(chef_chantier         && { chef_chantier }),
+      ...(date_demarrage_reelle ? { date_demarrage_reelle: new Date(date_demarrage_reelle) } : {}),
+      ...(date_livraison_prevue && { date_livraison_prevue: new Date(date_livraison_prevue) }),
     },
   });
   if (!updated.count) { res.status(404).json({ message: 'Chantier introuvable' }); return; }
