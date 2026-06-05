@@ -189,12 +189,17 @@ router.post('/:id/corps-etat', requireRole('admin', 'conducteur'), asyncHandler(
 
   const chantier = await prisma.chantier.findFirst({
     where: { id: id_chantier, tenant_id: req.user!.tenant_id },
-    select: { date_demarrage_reelle: true, date_livraison_prevue: true },
+    select: {
+      date_demarrage_reelle: true,
+      date_livraison_prevue: true,
+      contrat: { select: { date_demarrage_prevue: true } },
+    },
   });
   if (!chantier) { res.status(404).json({ message: 'Chantier introuvable' }); return; }
 
-  if (date_debut_prevue && chantier.date_demarrage_reelle) {
-    if (new Date(date_debut_prevue) < chantier.date_demarrage_reelle) {
+  const dateMin = chantier.date_demarrage_reelle ?? chantier.contrat?.date_demarrage_prevue ?? null;
+  if (date_debut_prevue && dateMin) {
+    if (new Date(date_debut_prevue) < new Date(dateMin)) {
       res.status(400).json({ message: 'La date de début ne peut pas être avant le démarrage du chantier.' });
       return;
     }
