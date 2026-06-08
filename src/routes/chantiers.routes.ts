@@ -382,7 +382,7 @@ router.post('/:id/intervenants', requireRole('admin', 'conducteur'), asyncHandle
       tenant_id: req.user!.tenant_id,
       id_chantier,
       id_corps_etat: Number(id_corps_etat),
-      type_intervenant, nom, raison_sociale, telephone, email,
+      type_intervenant, nom: nom || raison_sociale, raison_sociale, telephone, email,
       montant_contrat: Number(montant_contrat || 0),
       assurance: Boolean(assurance),
       numero_agrement,
