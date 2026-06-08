@@ -260,8 +260,6 @@ router.patch('/:id/corps-etat/:ceId/avancement', requireRole('admin', 'conducteu
       avancement: av,
       statut,
       ...(cout_reel !== undefined && { cout_reel: Number(cout_reel) }),
-      ...(av >= 100 && { date_fin_reelle: new Date() }),
-      ...(av > 0 && av < 100 && { date_debut_reelle: new Date() }),
     },
   });
 
