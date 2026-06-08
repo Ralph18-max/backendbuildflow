@@ -197,6 +197,19 @@ router.post('/:id/corps-etat', requireRole('admin', 'conducteur'), asyncHandler(
   });
   if (!chantier) { res.status(404).json({ message: 'Chantier introuvable' }); return; }
 
+  if (!date_debut_prevue || !date_fin_prevue) {
+    res.status(400).json({ message: 'Les dates de début et de fin prévues sont obligatoires.' });
+    return;
+  }
+  if (budget_alloue === undefined || budget_alloue === null || Number(budget_alloue) <= 0) {
+    res.status(400).json({ message: 'Le budget alloué est obligatoire et doit être supérieur à 0.' });
+    return;
+  }
+  if (new Date(date_debut_prevue) >= new Date(date_fin_prevue)) {
+    res.status(400).json({ message: 'La date de début doit être avant la date de fin.' });
+    return;
+  }
+
   const dateMin = chantier.date_demarrage_reelle ?? chantier.contrat?.date_demarrage_prevue ?? null;
   if (date_debut_prevue && dateMin) {
     if (new Date(date_debut_prevue) < new Date(dateMin)) {
@@ -226,8 +239,8 @@ router.post('/:id/corps-etat', requireRole('admin', 'conducteur'), asyncHandler(
       part_chantier:   Number(part_chantier || 0),
       ordre_execution: Number(ordre_execution || existants.length + 1),
       budget_alloue:   Number(budget_alloue || 0),
-      date_debut_prevue: date_debut_prevue ? new Date(date_debut_prevue) : undefined,
-      date_fin_prevue:   date_fin_prevue   ? new Date(date_fin_prevue)   : undefined,
+      date_debut_prevue: new Date(date_debut_prevue),
+      date_fin_prevue:   new Date(date_fin_prevue),
     },
   });
   res.status(201).json(corps);
