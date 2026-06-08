@@ -373,14 +373,14 @@ router.get('/:id/intervenants', asyncHandler(async (req: AuthRequest, res: Respo
 // POST /api/chantiers/:id/intervenants
 router.post('/:id/intervenants', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id_chantier = Number(req.params['id']);
-  const { id_corps_etat, type_intervenant, nom, raison_sociale, telephone, email, montant_contrat, assurance, numero_agrement } = req.body;
+  const { id_corps_etat, type_intervenant, nom, raison_sociale, nom_responsable, telephone, email, montant_contrat, assurance, numero_agrement } = req.body;
 
   const intervenant = await prisma.intervenant.create({
     data: {
       tenant_id: req.user!.tenant_id,
       id_chantier,
       id_corps_etat: Number(id_corps_etat),
-      type_intervenant, nom: nom || raison_sociale, raison_sociale, telephone, email,
+      type_intervenant, nom: nom || raison_sociale, raison_sociale, nom_responsable, telephone, email,
       montant_contrat: Number(montant_contrat || 0),
       assurance: Boolean(assurance),
       numero_agrement,
@@ -391,10 +391,10 @@ router.post('/:id/intervenants', requireRole('admin', 'conducteur'), asyncHandle
 
 // PATCH /api/chantiers/:id/intervenants/:intId — modifier
 router.patch('/:id/intervenants/:intId', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const { nom, raison_sociale, telephone, email, montant_contrat, assurance, actif } = req.body;
+  const { nom, raison_sociale, nom_responsable, telephone, email, montant_contrat, assurance, actif } = req.body;
   const updated = await prisma.intervenant.update({
     where: { id: Number(req.params['intId']) },
-    data: { nom, raison_sociale, telephone, email, montant_contrat: Number(montant_contrat || 0), assurance: Boolean(assurance), actif: Boolean(actif) },
+    data: { nom, raison_sociale, nom_responsable, telephone, email, montant_contrat: Number(montant_contrat || 0), assurance: Boolean(assurance), actif: Boolean(actif) },
   });
   res.json(updated);
 }));

@@ -266,6 +266,7 @@ model Intervenant {
   type_intervenant        String   @default("entreprise")
   nom                     String
   raison_sociale          String?
+  nom_responsable         String?
   telephone               String?
   email                   String?
   montant_contrat         Float    @default(0)
