@@ -46,7 +46,10 @@ router.get('/situations', asyncHandler(async (req: AuthRequest, res: Response): 
 router.get('/situations/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const situation = await prisma.situation.findFirst({
     where: { id: Number(req.params['id']), tenant_id: req.user!.tenant_id },
-    include: { chantier: true, paiements: true },
+    include: {
+      chantier: { include: { contrat: { include: { client: true } } } },
+      paiements: true,
+    },
   });
   if (!situation) { res.status(404).json({ message: 'Situation introuvable' }); return; }
   res.json(situation);

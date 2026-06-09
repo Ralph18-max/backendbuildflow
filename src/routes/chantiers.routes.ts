@@ -33,7 +33,11 @@ router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<vo
 router.get('/en-cours', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const chantiers = await prisma.chantier.findMany({
     where: { tenant_id: req.user!.tenant_id, statut: 'en_cours' },
-    include: { budget: true, corps_etat: true },
+    include: {
+      budget: true,
+      corps_etat: true,
+      contrat: { include: { client: true } },
+    },
     orderBy: { id: 'desc' },
   });
   res.json(chantiers);
