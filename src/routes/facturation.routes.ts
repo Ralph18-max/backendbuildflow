@@ -53,7 +53,7 @@ router.get('/situations/:id', asyncHandler(async (req: AuthRequest, res: Respons
 }));
 
 // POST /api/facturation/situations
-router.post('/situations', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/situations', requireRole('admin', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { id_chantier, montant_ht, taux_tva, avancement_facture, delai_paiement_jours } = req.body;
 
   const count = await prisma.situation.count({ where: { id_chantier: Number(id_chantier) } });
