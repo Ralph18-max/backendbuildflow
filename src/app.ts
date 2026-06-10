@@ -41,16 +41,24 @@ app.use(cors({
 app.use(express.json());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Limite les tentatives de connexion/inscription pour freiner le brute-force
-const authLimiter = rateLimit({
+// Limite les tentatives de connexion pour freiner le brute-force
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 10,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { message: 'Trop de tentatives, réessayez dans quelques minutes.' },
 });
-app.use('/api/auth/login',    authLimiter);
-app.use('/api/auth/register', authLimiter);
+// Limite les créations de compte (plus permissive : démos, tests, plusieurs entreprises)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Trop de tentatives d\'inscription, réessayez dans quelques minutes.' },
+});
+app.use('/api/auth/login',    loginLimiter);
+app.use('/api/auth/register', registerLimiter);
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/utilisateurs',  utilisateurRoutes);

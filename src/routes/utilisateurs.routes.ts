@@ -18,6 +18,17 @@ router.get('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res:
   res.json(utilisateurs);
 }));
 
+// GET /api/utilisateurs/chefs-chantier — liste légère des chefs de chantier actifs,
+// utilisée pour les menus de sélection (ex: assignation d'un chantier)
+router.get('/chefs-chantier', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const chefs = await prisma.utilisateur.findMany({
+    where: { tenant_id: req.user!.tenant_id, role: 'chef_chantier', actif: true },
+    select: { id: true, nom: true, prenom: true, role: true },
+    orderBy: { nom: 'asc' },
+  });
+  res.json(chefs);
+}));
+
 // POST /api/utilisateurs — Admin uniquement
 router.post('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { nom, prenom, email, role } = req.body;
