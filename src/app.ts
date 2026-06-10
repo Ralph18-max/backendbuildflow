@@ -2,6 +2,8 @@ import path from 'path';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import 'dotenv/config';
 
 import authRoutes         from './routes/auth.routes';
@@ -15,6 +17,10 @@ import comptabiliteRoutes from './routes/comptabilite.routes';
 import documentRoutes     from './routes/documents.routes';
 
 const app = express();
+
+// crossOriginResourcePolicy désactivé : le frontend (autre origine Vercel) doit pouvoir
+// charger les fichiers servis depuis /uploads (documents, photos, etc.)
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 const ALLOWED_ORIGINS = new Set([
   process.env['FRONTEND_URL'],
@@ -34,6 +40,17 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// Limite les tentatives de connexion/inscription pour freiner le brute-force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Trop de tentatives, réessayez dans quelques minutes.' },
+});
+app.use('/api/auth/login',    authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 app.use('/api/auth',          authRoutes);
 app.use('/api/utilisateurs',  utilisateurRoutes);
