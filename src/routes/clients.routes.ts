@@ -7,7 +7,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // GET /api/clients
-router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const clients = await prisma.client.findMany({
     where: { tenant_id: req.user!.tenant_id },
     include: { _count: { select: { contrats: true } } },
@@ -17,7 +17,7 @@ router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<vo
 }));
 
 // GET /api/clients/:id
-router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/:id', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const client = await prisma.client.findFirst({
     where: { id: Number(req.params['id']), tenant_id: req.user!.tenant_id },
     include: { contrats: true },

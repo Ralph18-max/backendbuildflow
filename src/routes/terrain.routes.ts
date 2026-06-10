@@ -9,7 +9,7 @@ router.use(authMiddleware);
 // ── Rapports terrain ──────────────────────────────────────────────
 
 // GET /api/terrain/rapports
-router.get('/rapports', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/rapports', requireRole('admin', 'conducteur', 'chef_chantier'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const where: Record<string, unknown> = { tenant_id: req.user!.tenant_id };
   if (req.query['chantier']) where['id_chantier'] = Number(req.query['chantier']);
 
@@ -66,7 +66,7 @@ router.post('/rapports', requireRole('admin', 'conducteur', 'chef_chantier'), as
 // ── Pointages ─────────────────────────────────────────────────────
 
 // GET /api/terrain/pointages
-router.get('/pointages', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/pointages', requireRole('admin', 'conducteur', 'chef_chantier'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const where: Record<string, unknown> = { tenant_id: req.user!.tenant_id };
   if (req.query['chantier']) where['id_chantier'] = Number(req.query['chantier']);
 

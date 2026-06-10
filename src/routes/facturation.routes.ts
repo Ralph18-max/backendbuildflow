@@ -10,7 +10,7 @@ const DELAI_PAIEMENT_JOURS = 30;
 const TAUX_RETENUE_GARANTIE = 0.05;
 
 // GET /api/facturation/situations
-router.get('/situations', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/situations', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const where: Record<string, unknown> = { tenant_id: req.user!.tenant_id };
   if (req.query['chantier']) where['id_chantier'] = Number(req.query['chantier']);
 
@@ -43,7 +43,7 @@ router.get('/situations', asyncHandler(async (req: AuthRequest, res: Response): 
 }));
 
 // GET /api/facturation/situations/:id
-router.get('/situations/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/situations/:id', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const situation = await prisma.situation.findFirst({
     where: { id: Number(req.params['id']), tenant_id: req.user!.tenant_id },
     include: {
@@ -180,7 +180,7 @@ router.patch('/factures-st/:id/valider', requireRole('admin', 'comptable'), asyn
 }));
 
 // GET /api/facturation/stats
-router.get('/stats', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/stats', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const situations = await prisma.situation.findMany({
     where: { tenant_id: req.user!.tenant_id },
   });

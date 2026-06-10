@@ -9,7 +9,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // GET /api/utilisateurs
-router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const utilisateurs = await prisma.utilisateur.findMany({
     where: { tenant_id: req.user!.tenant_id },
     select: { id: true, nom: true, prenom: true, email: true, role: true, actif: true },

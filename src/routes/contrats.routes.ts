@@ -7,7 +7,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // GET /api/contrats/stats — total RAF global (avant /:id pour éviter le conflit de route)
-router.get('/stats', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/stats', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const chantiers = await prisma.chantier.findMany({
     where: { tenant_id: req.user!.tenant_id },
     include: { situations: true, contrat: true },
@@ -25,7 +25,7 @@ router.get('/stats', asyncHandler(async (req: AuthRequest, res: Response): Promi
 }));
 
 // GET /api/contrats
-router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const contrats = await prisma.contrat.findMany({
     where: { tenant_id: req.user!.tenant_id },
     include: { client: true, modifications: true, chantier: { select: { id: true, statut: true } } },
@@ -35,7 +35,7 @@ router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<vo
 }));
 
 // GET /api/contrats/:id
-router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/:id', requireRole('admin', 'conducteur', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const contrat = await prisma.contrat.findFirst({
     where: { id: Number(req.params['id']), tenant_id: req.user!.tenant_id },
     include: { client: true, modifications: true, chantier: true },
