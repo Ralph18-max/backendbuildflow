@@ -63,7 +63,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
 }));
 
 // POST /api/chantiers
-router.post('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { id_contrat, nom_chantier, localisation, description,
           date_livraison_prevue, date_demarrage_reelle, chef_chantier } = req.body;
 
