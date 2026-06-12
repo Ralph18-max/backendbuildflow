@@ -337,8 +337,25 @@ router.post('/:id/planning', requireRole('admin', 'conducteur'), asyncHandler(as
 // POST /api/chantiers/:id/jalons
 router.post('/:id/jalons', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id_chantier = Number(req.params['id']);
-  const planning = await prisma.planning.findUnique({ where: { id_chantier } });
-  if (!planning) { res.status(404).json({ message: 'Créez d\'abord un planning' }); return; }
+  let planning = await prisma.planning.findUnique({ where: { id_chantier } });
+
+  // Pas de planning ? On en crée un automatiquement à partir des dates du chantier.
+  if (!planning) {
+    const chantier = await prisma.chantier.findFirst({
+      where: { id: id_chantier, tenant_id: req.user!.tenant_id },
+      select: { date_demarrage_reelle: true, date_livraison_prevue: true, created_at: true },
+    });
+    if (!chantier) { res.status(404).json({ message: 'Chantier introuvable' }); return; }
+
+    planning = await prisma.planning.create({
+      data: {
+        tenant_id: req.user!.tenant_id,
+        id_chantier,
+        date_debut_prevue: chantier.date_demarrage_reelle || chantier.created_at,
+        date_fin_prevue: chantier.date_livraison_prevue,
+      },
+    });
+  }
 
   const { nom_jalon, date_prevue } = req.body;
   const jalon = await prisma.jalon.create({
