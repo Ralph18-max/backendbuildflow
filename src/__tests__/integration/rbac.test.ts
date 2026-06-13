@@ -57,9 +57,10 @@ test('F-12 comptable : valider cloture OK, créer chantier interdit', async () =
 
 // ── F-13 : conducteur → avancement OK, gestion utilisateurs → 403 ───────────
 test('F-13 conducteur : avancement OK, utilisateurs interdit', async () => {
+  (mock.corpsEtat.findFirst as jest.Mock).mockResolvedValue({ id: 1, id_chantier: 1, tenant_id: 'tid1' });
   (mock.corpsEtat.update as jest.Mock).mockResolvedValue({ id: 1 });
   (mock.corpsEtat.findMany as jest.Mock).mockResolvedValue([{ part_chantier: 100, avancement: 80 }]);
-  (mock.chantier.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+  (mock.chantier.update as jest.Mock).mockResolvedValue({ id: 1 });
 
   const avancRes = await request(app)
     .patch('/chantiers/1/corps-etat/1/avancement')

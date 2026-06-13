@@ -19,12 +19,18 @@ function token(role = 'admin', tid = 'tid1') {
 
 // ── U-13 : sum part_chantier > 100% → 400 ───────────────────────────────────
 test('U-13 corps état — somme part_chantier > 100% → 400', async () => {
+  (mockPrisma.chantier.findFirst as jest.Mock).mockResolvedValue({
+    date_demarrage_reelle: null, date_livraison_prevue: new Date('2027-01-01'), contrat: null,
+  });
   (mockPrisma.corpsEtat.findMany as jest.Mock).mockResolvedValue([{ part_chantier: 90 }]);
 
   const res = await request(app)
     .post('/chantiers/1/corps-etat')
     .set('Authorization', token())
-    .send({ nom: 'Peinture', part_chantier: 15, ordre_execution: 9 });
+    .send({
+      nom: 'Peinture', part_chantier: 15, ordre_execution: 9,
+      date_debut_prevue: '2026-01-01', date_fin_prevue: '2026-06-01', budget_alloue: 1000,
+    });
 
   expect(res.status).toBe(400);
   expect(res.body.message).toMatch(/100/);
@@ -32,12 +38,13 @@ test('U-13 corps état — somme part_chantier > 100% → 400', async () => {
 
 // ── U-14 : recalcul avancement_global pondéré ────────────────────────────────
 test('U-14 patch avancement → avancement_global recalculé', async () => {
+  (mockPrisma.corpsEtat.findFirst as jest.Mock).mockResolvedValue({ id: 1, id_chantier: 1, tenant_id: 'tid1' });
   (mockPrisma.corpsEtat.update as jest.Mock).mockResolvedValue({ id: 1 });
   (mockPrisma.corpsEtat.findMany as jest.Mock).mockResolvedValue([
     { part_chantier: 50, avancement: 100 },
     { part_chantier: 50, avancement: 60 },
   ]);
-  (mockPrisma.chantier.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+  (mockPrisma.chantier.update as jest.Mock).mockResolvedValue({ id: 1 });
 
   const res = await request(app)
     .patch('/chantiers/1/corps-etat/1/avancement')
@@ -65,7 +72,7 @@ test('U-15 budget déjà existant → 409', async () => {
 test('U-16 marquer jalon atteint → ecart_jours calculé', async () => {
   const datePrevue = '2026-01-01';
   const dateReelle = '2026-01-08';
-  (mockPrisma.jalon.findUnique as jest.Mock).mockResolvedValue({
+  (mockPrisma.jalon.findFirst as jest.Mock).mockResolvedValue({
     id: 1, date_prevue: new Date(datePrevue), statut: 'en_attente',
   });
   (mockPrisma.jalon.update as jest.Mock).mockImplementation(({ data }) =>

@@ -29,10 +29,12 @@ const mockPrisma = {
   },
   corpsEtat: {
     findMany:  jest.fn(),
+    findFirst: jest.fn(),
     create:    jest.fn(),
     update:    jest.fn(),
     updateMany: jest.fn(),
     delete:    jest.fn(),
+    deleteMany: jest.fn(),
     aggregate: jest.fn(),
   },
   planning: {
@@ -42,6 +44,7 @@ const mockPrisma = {
   },
   jalon: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     create:    jest.fn(),
     update:    jest.fn(),
   },

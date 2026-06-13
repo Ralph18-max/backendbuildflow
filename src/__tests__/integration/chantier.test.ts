@@ -36,22 +36,30 @@ test('F-18 créer chantier + budget + corps état', async () => {
     .send({ debourse_sec_estime: 70_000_000, frais_generaux: 10_000_000, marge_prevue: 15_000_000, provision_aleas: 5_000_000 });
   expect(budRes.status).toBe(201);
 
+  (mock.chantier.findFirst as jest.Mock).mockResolvedValue({
+    date_demarrage_reelle: null, date_livraison_prevue: new Date('2027-01-01'), contrat: null,
+  });
+
   const ceRes = await request(app)
     .post('/chantiers/10/corps-etat')
     .set('Authorization', tok())
-    .send({ nom: 'Fondations', part_chantier: 20, ordre_execution: 1 });
+    .send({
+      nom: 'Fondations', part_chantier: 20, ordre_execution: 1,
+      date_debut_prevue: '2026-01-01', date_fin_prevue: '2026-06-01', budget_alloue: 1000,
+    });
   expect(ceRes.status).toBe(201);
 });
 
 // ── F-19 : 3 corps état → avancement_global pondéré ─────────────────────────
 test('F-19 avancement_global = somme pondérée des corps état', async () => {
+  (mock.corpsEtat.findFirst as jest.Mock).mockResolvedValue({ id: 1, id_chantier: 1, tenant_id: 'tid1' });
   (mock.corpsEtat.update as jest.Mock).mockResolvedValue({ id: 1 });
   (mock.corpsEtat.findMany as jest.Mock).mockResolvedValue([
     { part_chantier: 40, avancement: 100 }, // 40
     { part_chantier: 35, avancement: 80  }, // 28
     { part_chantier: 25, avancement: 0   }, // 0
   ]);
-  (mock.chantier.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+  (mock.chantier.update as jest.Mock).mockResolvedValue({ id: 1 });
 
   const res = await request(app)
     .patch('/chantiers/1/corps-etat/1/avancement')
@@ -65,7 +73,7 @@ test('F-19 avancement_global = somme pondérée des corps état', async () => {
 
 // ── F-20 : jalons → ecart_jours calculé correctement ────────────────────────
 test('F-20 planning jalon → ecart_jours = date_reelle - date_prevue', async () => {
-  (mock.jalon.findUnique as jest.Mock).mockResolvedValue({
+  (mock.jalon.findFirst as jest.Mock).mockResolvedValue({
     id: 1,
     date_prevue: new Date('2026-03-01'),
     statut: 'en_attente',
