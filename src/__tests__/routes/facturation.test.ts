@@ -18,6 +18,7 @@ const token = (role = 'admin') =>
 
 // ── U-19 : montant_ttc = ht * 1.18 ──────────────────────────────────────────
 test('U-19 créer situation → montant_ttc = ht * 1.18', async () => {
+  (mockPrisma.chantier.findFirst as jest.Mock).mockResolvedValue({ id: 1, tenant_id: 'tid1' });
   (mockPrisma.situation.count as jest.Mock).mockResolvedValue(0);
   (mockPrisma.situation.create as jest.Mock).mockImplementation(({ data }) =>
     Promise.resolve({ id: 1, ...data })
@@ -34,6 +35,7 @@ test('U-19 créer situation → montant_ttc = ht * 1.18', async () => {
 
 // ── U-20 : retenue_garantie = ttc * 0.05 ────────────────────────────────────
 test('U-20 créer situation → retenue_garantie = ttc * 0.05', async () => {
+  (mockPrisma.chantier.findFirst as jest.Mock).mockResolvedValue({ id: 1, tenant_id: 'tid1' });
   (mockPrisma.situation.count as jest.Mock).mockResolvedValue(0);
   (mockPrisma.situation.create as jest.Mock).mockImplementation(({ data }) =>
     Promise.resolve({ id: 1, ...data })

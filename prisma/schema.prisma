@@ -395,6 +395,8 @@ model Situation {
   reste_a_facturer   Float    @default(0)
   avancement_facture Float    @default(0)
   statut             StatutSituation @default(en_attente)
+  statut_retenue     StatutRetenue @default(a_liberer)
+  date_liberation_retenue DateTime?
   created_at         DateTime @default(now())
 
   chantier    Chantier     @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
@@ -407,6 +409,11 @@ enum StatutSituation {
   payee
   en_attente
   en_retard
+}
+
+enum StatutRetenue {
+  a_liberer
+  liberee
 }
 
 model Paiement {

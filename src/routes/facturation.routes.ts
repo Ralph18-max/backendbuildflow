@@ -59,6 +59,11 @@ router.get('/situations/:id', requireRole('admin', 'conducteur', 'comptable'), a
 router.post('/situations', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { id_chantier, montant_ht, taux_tva, avancement_facture, delai_paiement_jours } = req.body;
 
+  const chantier = await prisma.chantier.findFirst({
+    where: { id: Number(id_chantier), tenant_id: req.user!.tenant_id },
+  });
+  if (!chantier) { res.status(404).json({ message: 'Chantier introuvable' }); return; }
+
   const count = await prisma.situation.count({ where: { id_chantier: Number(id_chantier) } });
   const tva = Number(taux_tva || 18);
   const ht  = Number(montant_ht);
@@ -97,6 +102,14 @@ router.post('/encaissements', requireRole('comptable', 'admin'), asyncHandler(as
   });
   if (!situation) { res.status(404).json({ message: 'Situation introuvable' }); return; }
 
+  // La situation est payée quand l'encaissé couvre le montant net (hors retenue)
+  const montant_net = situation.montant_net || (situation.montant_ttc * (1 - TAUX_RETENUE_GARANTIE));
+  const reste_actuel = montant_net - situation.montant_encaisse;
+  if (Number(montant) > reste_actuel + 0.01) {
+    res.status(400).json({ message: `Le montant dépasse le reste à encaisser (${Math.round(reste_actuel)} FCFA).` });
+    return;
+  }
+
   const paiement = await prisma.paiement.create({
     data: {
       tenant_id: req.user!.tenant_id,
@@ -108,8 +121,6 @@ router.post('/encaissements', requireRole('comptable', 'admin'), asyncHandler(as
   });
 
   const nouveau_encaisse = situation.montant_encaisse + Number(montant);
-  // La situation est payée quand l'encaissé couvre le montant net (hors retenue)
-  const montant_net = situation.montant_net || (situation.montant_ttc * (1 - TAUX_RETENUE_GARANTIE));
   const reste = montant_net - nouveau_encaisse;
   const statut = reste <= 0 ? 'payee' : 'en_attente';
 
@@ -119,6 +130,47 @@ router.post('/encaissements', requireRole('comptable', 'admin'), asyncHandler(as
   });
 
   res.status(201).json(paiement);
+}));
+
+// PATCH /api/facturation/situations/:id/liberer-retenue
+router.patch('/situations/:id/liberer-retenue', requireRole('comptable', 'admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const situation = await prisma.situation.findFirst({
+    where: { id: Number(req.params['id']), tenant_id: req.user!.tenant_id },
+  });
+  if (!situation) { res.status(404).json({ message: 'Situation introuvable' }); return; }
+  if (situation.statut !== 'payee') {
+    res.status(400).json({ message: 'La situation doit être entièrement payée avant de libérer la retenue de garantie.' });
+    return;
+  }
+  if (situation.statut_retenue === 'liberee') {
+    res.status(400).json({ message: 'La retenue de garantie a déjà été libérée.' });
+    return;
+  }
+
+  await prisma.paiement.create({
+    data: {
+      tenant_id: req.user!.tenant_id,
+      id_situation: situation.id,
+      montant: situation.retenue_garantie,
+      date_paiement: new Date(),
+      mode_paiement: 'Levée de retenue de garantie',
+    },
+  });
+
+  const updated = await prisma.situation.update({
+    where: { id: situation.id },
+    data: {
+      statut_retenue: 'liberee',
+      date_liberation_retenue: new Date(),
+      montant_encaisse: situation.montant_encaisse + situation.retenue_garantie,
+    },
+    include: {
+      chantier: { include: { contrat: { include: { client: true } } } },
+      paiements: true,
+    },
+  });
+
+  res.json(updated);
 }));
 
 // ── Factures sous-traitants ───────────────────────────────────────────────────
@@ -139,6 +191,11 @@ router.get('/factures-st', requireRole('admin', 'comptable', 'conducteur'), asyn
 // POST /api/facturation/factures-st
 router.post('/factures-st', requireRole('admin', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { id_chantier, intervenant, corps_etat, date_facture, montant_ht, taux_tva } = req.body;
+
+  const chantier = await prisma.chantier.findFirst({
+    where: { id: Number(id_chantier), tenant_id: req.user!.tenant_id },
+  });
+  if (!chantier) { res.status(404).json({ message: 'Chantier introuvable' }); return; }
 
   const count = await prisma.factureST.count({ where: { tenant_id: req.user!.tenant_id } });
   const ht  = Number(montant_ht);
@@ -175,6 +232,20 @@ router.patch('/factures-st/:id/valider', requireRole('admin', 'comptable'), asyn
   const updated = await prisma.factureST.update({
     where: { id: Number(req.params['id']) },
     data: { statut: 'validee' },
+  });
+  res.json(updated);
+}));
+
+// PATCH /api/facturation/factures-st/:id/contester
+router.patch('/factures-st/:id/contester', requireRole('admin', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const facture = await prisma.factureST.findFirst({
+    where: { id: Number(req.params['id']), tenant_id: req.user!.tenant_id },
+  });
+  if (!facture) { res.status(404).json({ message: 'Facture introuvable' }); return; }
+
+  const updated = await prisma.factureST.update({
+    where: { id: Number(req.params['id']) },
+    data: { statut: 'contestee' },
   });
   res.json(updated);
 }));

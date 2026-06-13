@@ -18,6 +18,7 @@ const tok = (role = 'admin') =>
 
 // ── F-24 : créer situation → calculs serveur corrects ────────────────────────
 test('F-24 créer situation → montant_ttc, retenue, montant_net corrects', async () => {
+  (mock.chantier.findFirst as jest.Mock).mockResolvedValue({ id: 5, tenant_id: 'tid1' });
   (mock.situation.count as jest.Mock).mockResolvedValue(1);
   (mock.situation.create as jest.Mock).mockImplementation(({ data }) =>
     Promise.resolve({ id: 2, ...data })
