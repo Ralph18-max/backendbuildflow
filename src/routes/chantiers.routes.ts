@@ -179,7 +179,7 @@ router.patch('/:id/budget/cout-reel', requireRole('admin', 'comptable', 'conduct
 // GET /api/chantiers/:id/corps-etat
 router.get('/:id/corps-etat', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const corps = await prisma.corpsEtat.findMany({
-    where: { id_chantier: Number(req.params['id']) },
+    where: { id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
     include: { intervenants: true },
     orderBy: { ordre_execution: 'asc' },
   });
@@ -254,12 +254,18 @@ router.post('/:id/corps-etat', requireRole('admin', 'conducteur'), asyncHandler(
 router.patch('/:id/corps-etat/:ceId/avancement', requireRole('admin', 'conducteur', 'chef_chantier'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { avancement, cout_reel } = req.body;
   const av = Number(avancement);
+  const id_chantier = Number(req.params['id']);
+
+  const existant = await prisma.corpsEtat.findFirst({
+    where: { id: Number(req.params['ceId']), id_chantier, tenant_id: req.user!.tenant_id },
+  });
+  if (!existant) { res.status(404).json({ message: 'Corps d\'état introuvable' }); return; }
 
   // Statut auto-déduit de l'avancement
   const statut = av >= 100 ? 'termine' : av > 0 ? 'en_cours' : 'en_attente';
 
   const updated = await prisma.corpsEtat.update({
-    where: { id: Number(req.params['ceId']) },
+    where: { id: existant.id },
     data: {
       avancement: av,
       statut,
@@ -268,7 +274,6 @@ router.patch('/:id/corps-etat/:ceId/avancement', requireRole('admin', 'conducteu
   });
 
   // Recalcul automatique de l'avancement global du chantier
-  const id_chantier = Number(req.params['id']);
   const tousCorps = await prisma.corpsEtat.findMany({ where: { id_chantier } });
   const avancement_global = tousCorps.reduce((sum, c) => sum + (c.part_chantier * c.avancement) / 100, 0);
   await prisma.chantier.update({
@@ -281,8 +286,16 @@ router.patch('/:id/corps-etat/:ceId/avancement', requireRole('admin', 'conducteu
 
 // DELETE /api/chantiers/:id/corps-etat/:ceId
 router.delete('/:id/corps-etat/:ceId', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const ceId = Number(req.params['ceId']);
+
+  const nbIntervenants = await prisma.intervenant.count({ where: { id_corps_etat: ceId } });
+  if (nbIntervenants > 0) {
+    res.status(400).json({ message: 'Impossible de supprimer ce corps d\'état : des intervenants y sont rattachés.' });
+    return;
+  }
+
   const deleted = await prisma.corpsEtat.deleteMany({
-    where: { id: Number(req.params['ceId']), id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
+    where: { id: ceId, id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
   });
   if (!deleted.count) { res.status(404).json({ message: 'Corps d\'état introuvable' }); return; }
   res.json({ message: 'Corps d\'état supprimé' });
@@ -292,8 +305,8 @@ router.delete('/:id/corps-etat/:ceId', requireRole('admin', 'conducteur'), async
 
 // GET /api/chantiers/:id/planning
 router.get('/:id/planning', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const planning = await prisma.planning.findUnique({
-    where: { id_chantier: Number(req.params['id']) },
+  const planning = await prisma.planning.findFirst({
+    where: { id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
     include: { jalons: { orderBy: { date_prevue: 'asc' } } },
   });
   if (!planning) { res.status(404).json({ message: 'Planning introuvable' }); return; }
@@ -367,13 +380,22 @@ router.post('/:id/jalons', requireRole('admin', 'conducteur'), asyncHandler(asyn
 // PATCH /api/chantiers/:id/jalons/:jalonId — marquer atteint/manqué
 router.patch('/:id/jalons/:jalonId', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { statut, date_reelle } = req.body;
-  const date_prevue = (await prisma.jalon.findUnique({ where: { id: Number(req.params['jalonId']) } }))?.date_prevue;
-  const ecart_jours = date_reelle && date_prevue
-    ? Math.round((new Date(date_reelle).getTime() - new Date(date_prevue).getTime()) / 86_400_000)
+
+  const jalon = await prisma.jalon.findFirst({
+    where: {
+      id: Number(req.params['jalonId']),
+      tenant_id: req.user!.tenant_id,
+      planning: { id_chantier: Number(req.params['id']) },
+    },
+  });
+  if (!jalon) { res.status(404).json({ message: 'Jalon introuvable' }); return; }
+
+  const ecart_jours = date_reelle
+    ? Math.round((new Date(date_reelle).getTime() - new Date(jalon.date_prevue).getTime()) / 86_400_000)
     : 0;
 
   const updated = await prisma.jalon.update({
-    where: { id: Number(req.params['jalonId']) },
+    where: { id: jalon.id },
     data: { statut, date_reelle: date_reelle ? new Date(date_reelle) : undefined, ecart_jours },
   });
   res.json(updated);
@@ -384,7 +406,7 @@ router.patch('/:id/jalons/:jalonId', requireRole('admin', 'conducteur'), asyncHa
 // GET /api/chantiers/:id/intervenants
 router.get('/:id/intervenants', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const intervenants = await prisma.intervenant.findMany({
-    where: { id_chantier: Number(req.params['id']) },
+    where: { id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
     include: { corpsEtat: { select: { nom: true } } },
     orderBy: { id: 'asc' },
   });
@@ -413,8 +435,14 @@ router.post('/:id/intervenants', requireRole('admin', 'conducteur'), asyncHandle
 // PATCH /api/chantiers/:id/intervenants/:intId — modifier
 router.patch('/:id/intervenants/:intId', requireRole('admin', 'conducteur'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { nom, raison_sociale, nom_responsable, telephone, email, montant_contrat, assurance, actif } = req.body;
+
+  const existant = await prisma.intervenant.findFirst({
+    where: { id: Number(req.params['intId']), id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
+  });
+  if (!existant) { res.status(404).json({ message: 'Intervenant introuvable' }); return; }
+
   const updated = await prisma.intervenant.update({
-    where: { id: Number(req.params['intId']) },
+    where: { id: existant.id },
     data: { nom, raison_sociale, nom_responsable, telephone, email, montant_contrat: Number(montant_contrat || 0), assurance: Boolean(assurance), actif: Boolean(actif) },
   });
   res.json(updated);
@@ -422,7 +450,10 @@ router.patch('/:id/intervenants/:intId', requireRole('admin', 'conducteur'), asy
 
 // DELETE /api/chantiers/:id/intervenants/:intId
 router.delete('/:id/intervenants/:intId', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  await prisma.intervenant.delete({ where: { id: Number(req.params['intId']) } });
+  const deleted = await prisma.intervenant.deleteMany({
+    where: { id: Number(req.params['intId']), id_chantier: Number(req.params['id']), tenant_id: req.user!.tenant_id },
+  });
+  if (!deleted.count) { res.status(404).json({ message: 'Intervenant introuvable' }); return; }
   res.json({ message: 'Intervenant supprimé' });
 }));
 
