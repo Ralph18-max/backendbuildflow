@@ -38,6 +38,8 @@ model Utilisateur {
   role             Role     @default(conducteur)
   actif            Boolean  @default(true)
   created_at       DateTime @default(now())
+  reset_token         String?   @unique
+  reset_token_expires DateTime?
 
   entreprise Entreprise @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
 
