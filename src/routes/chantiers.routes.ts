@@ -140,7 +140,7 @@ router.patch('/:id/statut', requireRole('admin'), asyncHandler(async (req: AuthR
 // POST /api/chantiers/:id/budget — S0 figé (création unique)
 router.post('/:id/budget', requireRole('admin', 'comptable'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id_chantier = Number(req.params['id']);
-  const existant = await prisma.budget.findUnique({ where: { id_chantier } });
+  const existant = await prisma.budget.findFirst({ where: { id_chantier, tenant_id: req.user!.tenant_id } });
   if (existant) { res.status(409).json({ message: 'Budget S0 déjà défini — il est figé' }); return; }
 
   const { debourse_sec_estime, frais_generaux, marge_prevue, provision_aleas } = req.body;
@@ -157,6 +157,7 @@ router.post('/:id/budget', requireRole('admin', 'comptable'), asyncHandler(async
       provision_aleas: Number(provision_aleas || 0),
       montant_total_S0,
       reste_a_depenser: montant_total_S0,
+      cree_par: req.user!.email,
     },
   });
   res.status(201).json(budget);
@@ -167,7 +168,7 @@ router.patch('/:id/budget/cout-reel', requireRole('admin', 'comptable', 'conduct
   const id_chantier = Number(req.params['id']);
   const { cout_reel_a_date } = req.body;
 
-  const budget = await prisma.budget.findUnique({ where: { id_chantier } });
+  const budget = await prisma.budget.findFirst({ where: { id_chantier, tenant_id: req.user!.tenant_id } });
   if (!budget) { res.status(404).json({ message: 'Budget introuvable' }); return; }
 
   const reste_a_depenser = budget.montant_total_S0 - Number(cout_reel_a_date);

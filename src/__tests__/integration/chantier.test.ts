@@ -19,7 +19,7 @@ const tok = (role = 'admin') =>
 // ── F-18 : créer chantier → budget → corps état ──────────────────────────────
 test('F-18 créer chantier + budget + corps état', async () => {
   (mock.chantier.create as jest.Mock).mockResolvedValue({ id: 10, nom_chantier: 'Imm' });
-  (mock.budget.findUnique as jest.Mock).mockResolvedValue(null);
+  (mock.budget.findFirst as jest.Mock).mockResolvedValue(null);
   (mock.budget.create as jest.Mock).mockResolvedValue({ id: 1, montant_total_S0: 100_000_000 });
   (mock.corpsEtat.findMany as jest.Mock).mockResolvedValue([]);
   (mock.corpsEtat.create as jest.Mock).mockResolvedValue({ id: 1 });

@@ -27,6 +27,9 @@ const upload = multer({
   limits: { fileSize: 20 * 1024 * 1024 }, // 20 Mo max
 });
 
+const CATEGORIES_VALIDES = ['contrat', 'plan', 'pv', 'facture', 'photo', 'divers'];
+const EXTENSIONS_VALIDES = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip', 'txt', 'dwg'];
+
 // GET /api/documents
 router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const where: Record<string, unknown> = { tenant_id: req.user!.tenant_id };
@@ -81,6 +84,18 @@ router.post('/', requireRole('admin', 'conducteur', 'chef_chantier'), asyncHandl
     res.status(400).json({ message: 'Chantier et nom de fichier requis' });
     return;
   }
+  if (extension && !EXTENSIONS_VALIDES.includes(String(extension).toLowerCase())) {
+    res.status(400).json({ message: 'Extension de fichier non autorisée' });
+    return;
+  }
+  if (categorie && !CATEGORIES_VALIDES.includes(categorie)) {
+    res.status(400).json({ message: 'Catégorie invalide' });
+    return;
+  }
+  if (url_fichier && !String(url_fichier).includes('/uploads/')) {
+    res.status(400).json({ message: 'URL de fichier invalide' });
+    return;
+  }
 
   const document = await prisma.document.create({
     data: {
@@ -105,7 +120,7 @@ router.delete('/:id', requireRole('admin', 'conducteur'), asyncHandler(async (re
 
   // Supprimer le fichier physique si stocké localement
   if (doc.url_fichier?.includes('/uploads/')) {
-    const filename = doc.url_fichier.split('/uploads/').pop();
+    const filename = path.basename(doc.url_fichier.split('/uploads/').pop() || '');
     if (filename) {
       const filePath = path.join(uploadsDir, filename);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);

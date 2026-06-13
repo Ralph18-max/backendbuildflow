@@ -58,7 +58,7 @@ test('U-14 patch avancement → avancement_global recalculé', async () => {
 
 // ── U-15 : budget déjà existant → 409 ───────────────────────────────────────
 test('U-15 budget déjà existant → 409', async () => {
-  (mockPrisma.budget.findUnique as jest.Mock).mockResolvedValue({ id: 1 });
+  (mockPrisma.budget.findFirst as jest.Mock).mockResolvedValue({ id: 1 });
 
   const res = await request(app)
     .post('/chantiers/1/budget')

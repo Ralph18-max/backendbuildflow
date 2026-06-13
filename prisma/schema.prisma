@@ -191,6 +191,8 @@ model Budget {
   reste_a_depenser    Float @default(0)
   ecart_budget        Float @default(0)
   created_at          DateTime @default(now())
+  cree_par            String?
+  s0_fige             Boolean @default(true)
 
   chantier Chantier @relation(fields: [id_chantier], references: [id], onDelete: Cascade)
 

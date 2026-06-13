@@ -23,6 +23,7 @@ const mockPrisma = {
   },
   budget: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     create:    jest.fn(),
     update:    jest.fn(),
     updateMany: jest.fn(),

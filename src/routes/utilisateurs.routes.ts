@@ -8,6 +8,8 @@ import { envoyerCredentiels } from '../services/email.service';
 const router = Router();
 router.use(authMiddleware);
 
+const ROLES_VALIDES = ['admin', 'conducteur', 'chef_chantier', 'comptable'];
+
 // GET /api/utilisateurs
 router.get('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const utilisateurs = await prisma.utilisateur.findMany({
@@ -34,6 +36,10 @@ router.post('/', requireRole('admin'), asyncHandler(async (req: AuthRequest, res
   const { nom, prenom, email, role } = req.body;
   if (!nom || !prenom || !email || !role) {
     res.status(400).json({ message: 'Champs requis manquants' });
+    return;
+  }
+  if (!ROLES_VALIDES.includes(role)) {
+    res.status(400).json({ message: 'Rôle invalide' });
     return;
   }
 
@@ -92,6 +98,16 @@ router.patch('/:id/toggle', requireRole('admin'), asyncHandler(async (req: AuthR
 router.put('/:id', requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = Number(req.params['id']);
   const { nom, prenom, email, role } = req.body;
+
+  if (role && !ROLES_VALIDES.includes(role)) {
+    res.status(400).json({ message: 'Rôle invalide' });
+    return;
+  }
+
+  const utilisateur = await prisma.utilisateur.findFirst({
+    where: { id, tenant_id: req.user!.tenant_id },
+  });
+  if (!utilisateur) { res.status(404).json({ message: 'Utilisateur introuvable' }); return; }
 
   const updated = await prisma.utilisateur.update({
     where: { id },
