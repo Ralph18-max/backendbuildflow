@@ -1,5 +1,30 @@
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
+async function envoyerViaBrevo(params: { email: string; subject: string; html: string }): Promise<void> {
+  const senderEmail = process.env['EMAIL_FROM_ADDRESS'] || 'kouamejeantrinite@gmail.com';
+  const senderName  = process.env['EMAIL_FROM_NAME']    || 'BuildFlow';
+
+  const res = await fetch(BREVO_API_URL, {
+    method: 'POST',
+    headers: {
+      'accept':       'application/json',
+      'api-key':      process.env['BREVO_API_KEY'] ?? '',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender:      { name: senderName, email: senderEmail },
+      to:          [{ email: params.email }],
+      subject:     params.subject,
+      htmlContent: params.html,
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`Brevo error ${res.status}: ${detail}`);
+  }
+}
+
 export async function envoyerCredentiels(params: {
   prenom:    string;
   nom:       string;
@@ -103,28 +128,11 @@ export async function envoyerCredentiels(params: {
 </body>
 </html>`;
 
-  const senderEmail = process.env['EMAIL_FROM_ADDRESS'] || 'kouamejeantrinite@gmail.com';
-  const senderName  = process.env['EMAIL_FROM_NAME']    || 'BuildFlow';
-
-  const res = await fetch(BREVO_API_URL, {
-    method: 'POST',
-    headers: {
-      'accept':       'application/json',
-      'api-key':      process.env['BREVO_API_KEY'] ?? '',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      sender:      { name: senderName, email: senderEmail },
-      to:          [{ email }],
-      subject:     `[BuildFlow] Vos identifiants de connexion — ${societe}`,
-      htmlContent: html,
-    }),
+  await envoyerViaBrevo({
+    email,
+    subject: `[BuildFlow] Vos identifiants de connexion — ${societe}`,
+    html,
   });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`Brevo error ${res.status}: ${detail}`);
-  }
 }
 
 export async function envoyerResetPassword(params: {
@@ -187,26 +195,9 @@ export async function envoyerResetPassword(params: {
 </body>
 </html>`;
 
-  const senderEmail = process.env['EMAIL_FROM_ADDRESS'] || 'kouamejeantrinite@gmail.com';
-  const senderName  = process.env['EMAIL_FROM_NAME']    || 'BuildFlow';
-
-  const res = await fetch(BREVO_API_URL, {
-    method: 'POST',
-    headers: {
-      'accept':       'application/json',
-      'api-key':      process.env['BREVO_API_KEY'] ?? '',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      sender:      { name: senderName, email: senderEmail },
-      to:          [{ email }],
-      subject:     `[BuildFlow] Réinitialisation de votre mot de passe`,
-      htmlContent: html,
-    }),
+  await envoyerViaBrevo({
+    email,
+    subject: `[BuildFlow] Réinitialisation de votre mot de passe`,
+    html,
   });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`Brevo error ${res.status}: ${detail}`);
-  }
 }
