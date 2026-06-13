@@ -372,6 +372,7 @@ model PointageIntervenant {
   corps_etat      String
   present         Boolean @default(true)
   heures          Float   @default(8)
+  observation     String?
 
   pointage Pointage @relation(fields: [id_pointage], references: [id], onDelete: Cascade)
 

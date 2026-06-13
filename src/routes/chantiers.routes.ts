@@ -31,8 +31,15 @@ router.get('/', asyncHandler(async (req: AuthRequest, res: Response): Promise<vo
 
 // GET /api/chantiers/en-cours
 router.get('/en-cours', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = req.user!;
+  const where: Prisma.ChantierWhereInput = { tenant_id: user.tenant_id, statut: 'en_cours' };
+
+  if (user.role === 'chef_chantier') {
+    where.chef_chantier = { contains: `${user.prenom} ${user.nom}`, mode: 'insensitive' };
+  }
+
   const chantiers = await prisma.chantier.findMany({
-    where: { tenant_id: req.user!.tenant_id, statut: 'en_cours' },
+    where,
     include: {
       budget: true,
       corps_etat: true,

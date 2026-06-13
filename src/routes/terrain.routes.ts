@@ -98,12 +98,13 @@ router.post('/pointages', requireRole('admin', 'conducteur', 'chef_chantier'), a
       total_presents,
       total_heures,
       intervenants: {
-        create: liste.map((i: { id_intervenant: number; nom_complet: string; corps_etat: string; present: boolean; heures: number }) => ({
+        create: liste.map((i: { id_intervenant: number; nom_complet: string; corps_etat: string; present: boolean; heures: number; observation?: string }) => ({
           id_intervenant: Number(i.id_intervenant),
           nom_complet:    i.nom_complet,
           corps_etat:     i.corps_etat,
           present:        Boolean(i.present),
           heures:         Number(i.heures),
+          observation:    i.observation || null,
         })),
       },
     },
